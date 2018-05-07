@@ -1,24 +1,25 @@
 import numpy as np
 from scipy.io import loadmat
 from scipy.optimize import minimize
+from sklearn.svm import SVC
 
 
 def preprocess():
-    """ 
+    """
      Input:
      Although this function doesn't have any input, you are required to load
      the MNIST data set from file 'mnist_all.mat'.
 
      Output:
-     train_data: matrix of training set. Each row of train_data contains 
+     train_data: matrix of training set. Each row of train_data contains
        feature vector of a image
      train_label: vector of label corresponding to each image in the training
        set
-     validation_data: matrix of training set. Each row of validation_data 
+     validation_data: matrix of training set. Each row of validation_data
        contains feature vector of a image
-     validation_label: vector of label corresponding to each image in the 
+     validation_label: vector of label corresponding to each image in the
        training set
-     test_data: matrix of training set. Each row of test_data contains 
+     test_data: matrix of training set. Each row of test_data contains
        feature vector of a image
      test_label: vector of label corresponding to each image in the testing
        set
@@ -94,22 +95,26 @@ def blrObjFunction(initialWeights, *args):
     its gradient.
 
     Input:
-        initialWeights: the weight vector (w_k) of size (D + 1) x 1 
+        initialWeights: the weight vector (w_k) of size (D + 1) x 1
         train_data: the data matrix of size N x D
         labeli: the label vector (y_k) of size N x 1 where each entry can be either 0 or 1 representing the label of corresponding feature vector
 
-    Output: 
+    Output:
         error: the scalar value of error function of 2-class logistic regression
         error_grad: the vector of size (D+1) x 1 representing the gradient of
                     error function
     """
     train_data, labeli = args
-
     n_data = train_data.shape[0]
     n_features = train_data.shape[1]
-    error = 0
+    new_train = np.concatenate((np.ones((n_data, 1)), train_data), 1)
+    theta = sigmoid(np.sum(initialWeights.T * new_train, axis=1))
+    theta = theta.reshape(n_data, -1)
+    error = sum(labeli * np.log(theta) + (1 - labeli) * np.log(1 - theta)) * (-1 / n_data)
     error_grad = np.zeros((n_features + 1, 1))
-
+    error_grad = (np.dot((theta - labeli).T, new_train) / n_data).T
+    error_grad = error_grad.flatten()
+    print(error_grad)
     ##################
     # YOUR CODE HERE #
     ##################
@@ -120,16 +125,16 @@ def blrObjFunction(initialWeights, *args):
 
 def blrPredict(W, data):
     """
-     blrObjFunction predicts the label of data given the data and parameter W 
+     blrObjFunction predicts the label of data given the data and parameter W
      of Logistic Regression
-     
+
      Input:
-         W: the matrix of weight of size (D + 1) x 10. Each column is the weight 
+         W: the matrix of weight of size (D + 1) x 10. Each column is the weight
          vector of a Logistic Regression classifier.
          X: the data matrix of size N x D
-         
-     Output: 
-         label: vector of size N x 1 representing the predicted label of 
+
+     Output:
+         label: vector of size N x 1 representing the predicted label of
          corresponding feature vector given in data matrix
 
     """
@@ -139,6 +144,14 @@ def blrPredict(W, data):
     # YOUR CODE HERE #
     ##################
     # HINT: Do not forget to add the bias term to your input data
+    new_X = np.concatenate((np.ones((data.shape[0], 1)), data), 1)
+    for i in range(data.shape[0]):
+        max = 0
+        for j in range(10):
+            tmp = np.dot(W[:, j], new_X[i])
+            if tmp > max:
+                max = tmp
+                label[i] = j
 
     return label
 
@@ -147,11 +160,11 @@ def mlrObjFunction(params, *args):
     """
     mlrObjFunction computes multi-class Logistic Regression error function and
     its gradient.
-
+    initialWeights_b = np.zeros((n_feature + 1, n_class))
     Input:
-        initialWeights: the weight vector of size (D + 1) x 1
+        initialWeights: the weight vector of size (D + 1) x k
         train_data: the data matrix of size N x D
-        labeli: the label vector of size N x 1 where each entry can be either 0 or 1
+        Y: the label vector of size N x k where each entry can be either 0 or 1
                 representing the label of corresponding feature vector
 
     Output:
@@ -159,6 +172,7 @@ def mlrObjFunction(params, *args):
         error_grad: the vector of size (D+1) x 10 representing the gradient of
                     error function
     """
+    train_data, Y = args
     n_data = train_data.shape[0]
     n_feature = train_data.shape[1]
     error = 0
@@ -167,6 +181,8 @@ def mlrObjFunction(params, *args):
     ##################
     # YOUR CODE HERE #
     ##################
+    theta = np.zeros((n_data, n_feature))
+
     # HINT: Do not forget to add the bias term to your input data
 
     return error, error_grad
@@ -214,7 +230,7 @@ n_feature = train_data.shape[1]
 Y = np.zeros((n_train, n_class))
 for i in range(n_class):
     Y[:, i] = (train_label == i).astype(int).ravel()
-
+"""
 # Logistic Regression with Gradient Descent
 W = np.zeros((n_feature + 1, n_class))
 initialWeights = np.zeros((n_feature + 1, 1))
@@ -236,20 +252,28 @@ print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == vali
 # Find the accuracy on Testing Dataset
 predicted_label = blrPredict(W, test_data)
 print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
-
+"""
 """
 Script for Support Vector Machine
 """
 
 print('\n\n--------------SVM-------------------\n\n')
-##################
-# YOUR CODE HERE #
-##################
-
+# C (1, 10, 20, 30, · · · , 100)
+# linear, rbf
+clf = SVC(kernel='linear')
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+print(predicted_label.shape)
+print(train_label.shape)
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label).astype(float))) + '%')
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label).astype(float))) + '%')
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
 
 """
 Script for Extra Credit Part
-"""
+
 # FOR EXTRA CREDIT ONLY
 W_b = np.zeros((n_feature + 1, n_class))
 initialWeights_b = np.zeros((n_feature + 1, n_class))
@@ -270,3 +294,4 @@ print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label_b == va
 # Find the accuracy on Testing Dataset
 predicted_label_b = mlrPredict(W_b, test_data)
 print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label_b == test_label).astype(float))) + '%')
+"""
