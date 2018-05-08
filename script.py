@@ -2,7 +2,7 @@ import numpy as np
 from scipy.io import loadmat
 from scipy.optimize import minimize
 from sklearn.svm import SVC
-
+import matplotlib.pyplot as plt
 
 def preprocess():
     """
@@ -114,7 +114,6 @@ def blrObjFunction(initialWeights, *args):
     error_grad = np.zeros((n_features + 1, 1))
     error_grad = (np.dot((theta - labeli).T, new_train) / n_data).T
     error_grad = error_grad.flatten()
-    print(error_grad)
     ##################
     # YOUR CODE HERE #
     ##################
@@ -148,7 +147,7 @@ def blrPredict(W, data):
     for i in range(data.shape[0]):
         max = 0
         for j in range(10):
-            tmp = np.dot(W[:, j], new_X[i])
+            tmp = sigmoid(np.dot(W[:,j], new_X[i]))
             if tmp > max:
                 max = tmp
                 label[i] = j
@@ -156,7 +155,7 @@ def blrPredict(W, data):
     return label
 
 
-def mlrObjFunction(params, *args):
+def mlrObjFunction(initialWeights_b, *args):
     """
     mlrObjFunction computes multi-class Logistic Regression error function and
     its gradient.
@@ -175,14 +174,22 @@ def mlrObjFunction(params, *args):
     train_data, Y = args
     n_data = train_data.shape[0]
     n_feature = train_data.shape[1]
+    initialWeights_b.reshape(n_feature,-1)
+    n_class = initialWeights_b.shape[1]
+    new_train = np.concatenate((np.ones((n_data, 1)), train_data), 1)
     error = 0
     error_grad = np.zeros((n_feature + 1, n_class))
 
     ##################
     # YOUR CODE HERE #
     ##################
-    theta = np.zeros((n_data, n_feature))
+    theta = np.zeros((n_data, n_class))
+    for j in range(initialWeights_b.shape[1]) :
+        theta[:,j] = np.sum(np.exp(initialWeights_b[:,j].T * new_train), axis=1)
+    theta = theta/np.sum(theta, axis=1).reshape(n_data,-1)
+    error = sum(sum(Y*np.log(theta), axis=1), axis=0)
 
+    error_grad = np.dot(new_train.T, (theta-Y)).ravel()
     # HINT: Do not forget to add the bias term to your input data
 
     return error, error_grad
@@ -204,10 +211,22 @@ def mlrPredict(W, data):
 
     """
     label = np.zeros((data.shape[0], 1))
-
+    n_data = data.shape[0]
     ##################
     # YOUR CODE HERE #
     ##################
+    new_X = np.concatenate((np.ones((data.shape[0], 1)), data), 1)
+    theta = np.zeros((data.shape[0], n_class))
+    for j in range(W.shape[1]):
+        theta[:, j] = np.sum(np.exp(W[:, j].T * new_X), axis=1)
+    theta = theta / np.sum(theta, axis=1).reshape(n_data,-1)
+    for i in range(data.shape[0]):
+        max = 0
+        for j in range(10):
+            tmp = theta[i][j]
+            if tmp > max:
+                max = tmp
+                label[i] = j
     # HINT: Do not forget to add the bias term to your input data
 
     return label
@@ -230,7 +249,7 @@ n_feature = train_data.shape[1]
 Y = np.zeros((n_train, n_class))
 for i in range(n_class):
     Y[:, i] = (train_label == i).astype(int).ravel()
-"""
+
 # Logistic Regression with Gradient Descent
 W = np.zeros((n_feature + 1, n_class))
 initialWeights = np.zeros((n_feature + 1, 1))
@@ -252,25 +271,199 @@ print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == vali
 # Find the accuracy on Testing Dataset
 predicted_label = blrPredict(W, test_data)
 print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
-"""
+
 """
 Script for Support Vector Machine
 """
 
 print('\n\n--------------SVM-------------------\n\n')
+
+svm = np.array(["linear", "rbf-default","rbf-0.1-1.0", "rbf-auto-10.0", "rbf-auto-20.0", "rbf-auto-30.0", "rbf-auto-40.0", "rbf-auto-50.0", "rbf-auto-60.0", "rbf-auto-70.0", "rbf-auto-80.0", "rbf-auto-90.0", "rbf-auto-100.0" ])
+train_acc = np.array([])
+validation_acc = np.array([])
+test_acc = np.array([])
 # C (1, 10, 20, 30, · · · , 100)
 # linear, rbf
 clf = SVC(kernel='linear')
 clf.fit(train_data, train_label.ravel())
 predicted_label = clf.predict(train_data)
-print(predicted_label.shape)
-print(train_label.shape)
-print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label).astype(float))) + '%')
-predicted_label = clf.predict(validation_data)
-print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label).astype(float))) + '%')
-predicted_label = clf.predict(test_data)
-print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
 
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------rbf-------------------\n\n')
+#rbf-default
+clf = SVC(kernel='rbf')
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------gamma 0.1-------------------\n\n')
+clf = SVC(kernel='rbf', gamma=0.1)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=10.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 10.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=20.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 20.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=30.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 30.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=40.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 40.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=50.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 50.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=60.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 60.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=70.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 70.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=80.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 80.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=90.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 90.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+print('\n\n--------------C=100.0-------------------\n\n')
+clf = SVC(kernel='rbf', C = 100.0)
+clf.fit(train_data, train_label.ravel())
+predicted_label = clf.predict(train_data)
+
+print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label == train_label.ravel()).astype(float))) + '%')
+train_acc = np.append(train_acc, 100 * np.mean((predicted_label == train_label.ravel()).astype(float)))
+predicted_label = clf.predict(validation_data)
+print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == validation_label.ravel()).astype(float))) + '%')
+validation_acc = np.append(validation_acc, 100 * np.mean((predicted_label == validation_label.ravel()).astype(float)))
+predicted_label = clf.predict(test_data)
+print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label.ravel()).astype(float))) + '%')
+test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
+
+fig = plt.figure(figsize=[18,9])
+plt.subplot(1, 3, 1)
+plt.plot(svm,train_acc)
+plt.plot(svm,validation_acc, 'r')
+plt.plot(svm,test_acc, 'g')
+plt.legend(['SVMs for Train Data', 'SVMs for Validation Data', 'SVMs for Test Data'])
+plt.title('Relation between SVM models and accuracy')
+plt.xlabel('hyperparameters')
+plt.ylabel('accuracy')
+plt.show()
 """
 Script for Extra Credit Part
 
