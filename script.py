@@ -174,24 +174,27 @@ def mlrObjFunction(initialWeights_b, *args):
     train_data, Y = args
     n_data = train_data.shape[0]
     n_feature = train_data.shape[1]
-    initialWeights_b.reshape(n_feature,-1)
+    initialWeights_b = initialWeights_b.reshape(n_feature+1,10)
     n_class = initialWeights_b.shape[1]
     new_train = np.concatenate((np.ones((n_data, 1)), train_data), 1)
-    error = 0
-    error_grad = np.zeros((n_feature + 1, n_class))
 
     ##################
     # YOUR CODE HERE #
     ##################
     theta = np.zeros((n_data, n_class))
+ #   sumtheta = np.zeros((n_data, 1))
+ #   for n in range(n_data):
+
     for j in range(initialWeights_b.shape[1]) :
-        theta[:,j] = np.sum(np.exp(initialWeights_b[:,j].T * new_train), axis=1)
-    theta = theta/np.sum(theta, axis=1).reshape(n_data,-1)
-    error = sum(sum(Y*np.log(theta), axis=1), axis=0)
+        theta[:,j] = np.exp(np.sum((initialWeights_b[:,j].T * new_train), axis=1))
+    #theta = np.exp(theta)
+    theta = theta/(np.sum(theta, axis=1).reshape(n_data,-1))
+
+    error = (-1)*np.sum(np.sum(Y*np.log(theta), axis=1), axis=0)
 
     error_grad = np.dot(new_train.T, (theta-Y)).ravel()
     # HINT: Do not forget to add the bias term to your input data
-
+    print(error_grad)
     return error, error_grad
 
 
@@ -212,24 +215,25 @@ def mlrPredict(W, data):
     """
     label = np.zeros((data.shape[0], 1))
     n_data = data.shape[0]
+
     ##################
     # YOUR CODE HERE #
     ##################
     new_X = np.concatenate((np.ones((data.shape[0], 1)), data), 1)
-    theta = np.zeros((data.shape[0], n_class))
+    theta = np.zeros((data.shape[0], W.shape[1]))
     for j in range(W.shape[1]):
-        theta[:, j] = np.sum(np.exp(W[:, j].T * new_X), axis=1)
-    theta = theta / np.sum(theta, axis=1).reshape(n_data,-1)
-    for i in range(data.shape[0]):
+        theta[:, j] = np.exp(np.sum((W[:, j].T * new_X), axis=1))
+    theta = theta / (np.sum(theta, axis=1).reshape(n_data,-1))
+    for n in range(data.shape[0]):
         max = 0
-        for j in range(10):
-            tmp = theta[i][j]
+        for k in range(W.shape[1]):
+            tmp = theta[n][k]
             if tmp > max:
                 max = tmp
-                label[i] = j
-    # HINT: Do not forget to add the bias term to your input data
+                label[n] = k
 
     return label
+
 
 
 """
@@ -250,6 +254,7 @@ Y = np.zeros((n_train, n_class))
 for i in range(n_class):
     Y[:, i] = (train_label == i).astype(int).ravel()
 
+"""
 # Logistic Regression with Gradient Descent
 W = np.zeros((n_feature + 1, n_class))
 initialWeights = np.zeros((n_feature + 1, 1))
@@ -271,11 +276,11 @@ print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label == vali
 # Find the accuracy on Testing Dataset
 predicted_label = blrPredict(W, test_data)
 print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
-
+"""
 """
 Script for Support Vector Machine
 """
-
+"""
 print('\n\n--------------SVM-------------------\n\n')
 
 svm = np.array(["linear", "rbf-default","rbf-0.1-1.0", "rbf-auto-10.0", "rbf-auto-20.0", "rbf-auto-30.0", "rbf-auto-40.0", "rbf-auto-50.0", "rbf-auto-60.0", "rbf-auto-70.0", "rbf-auto-80.0", "rbf-auto-90.0", "rbf-auto-100.0" ])
@@ -455,7 +460,6 @@ print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label == test_la
 test_acc = np.append(test_acc, 100 * np.mean((predicted_label == test_label.ravel()).astype(float)))
 
 fig = plt.figure(figsize=[18,9])
-plt.subplot(1, 3, 1)
 plt.plot(svm,train_acc)
 plt.plot(svm,validation_acc, 'r')
 plt.plot(svm,test_acc, 'g')
@@ -465,17 +469,16 @@ plt.xlabel('hyperparameters')
 plt.ylabel('accuracy')
 plt.show()
 """
+"""
 Script for Extra Credit Part
-
+"""
 # FOR EXTRA CREDIT ONLY
-W_b = np.zeros((n_feature + 1, n_class))
 initialWeights_b = np.zeros((n_feature + 1, n_class))
 opts_b = {'maxiter': 100}
 
 args_b = (train_data, Y)
 nn_params = minimize(mlrObjFunction, initialWeights_b, jac=True, args=args_b, method='CG', options=opts_b)
 W_b = nn_params.x.reshape((n_feature + 1, n_class))
-
 # Find the accuracy on Training Dataset
 predicted_label_b = mlrPredict(W_b, train_data)
 print('\n Training set Accuracy:' + str(100 * np.mean((predicted_label_b == train_label).astype(float))) + '%')
@@ -487,4 +490,3 @@ print('\n Validation set Accuracy:' + str(100 * np.mean((predicted_label_b == va
 # Find the accuracy on Testing Dataset
 predicted_label_b = mlrPredict(W_b, test_data)
 print('\n Testing set Accuracy:' + str(100 * np.mean((predicted_label_b == test_label).astype(float))) + '%')
-"""
